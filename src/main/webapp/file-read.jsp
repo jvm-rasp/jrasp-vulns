@@ -1,0 +1,57 @@
+<%@page import="java.io.FileInputStream" %>
+<%@page contentType="text/html; charset=UTF-8" %>
+<%
+    String normal_querystring = "?file=test.txt";
+    String linux_querystring = "?file=../../../../../../../../../../../../../../../etc/passwd";
+%>
+
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <title>任意文件下载/读取漏洞</title>
+</head>
+<body>
+<h1>任意文件下载/读取漏洞（路径拼接）</h1>
+<p>正常调用: </p>
+<p>curl '<a href="<%=request.getRequestURL()+normal_querystring%>"
+            target="_blank"><%=request.getRequestURL() + normal_querystring%>
+</a>'</p>
+
+<p>不正常调用: </p>
+<p>curl '<a href="<%=request.getRequestURL()+linux_querystring%>"
+            target="_blank"><%=request.getRequestURL() + linux_querystring%>
+</a>'</p>
+
+<br>
+<p>读取内容</p>
+<pre><%
+    String reportName = request.getParameter("file");
+    if (reportName != null) {
+        try {
+            String fileName;
+            String serverInfo = application.getServerInfo();
+            if (serverInfo != null && serverInfo.toLowerCase().contains("weblogic")) {
+                fileName = application.getResource("/").getPath() + "/reports/" + reportName;
+            } else {
+                fileName = application.getRealPath("/") + "/reports/" + reportName;
+            }
+            FileInputStream fileIn = new FileInputStream(fileName);
+            String outputStr = "";
+
+            byte[] outputByte = new byte[4096];
+            while (fileIn.read(outputByte, 0, 4096) != -1) {
+                String s = new String(outputByte, "UTF-8");
+                outputStr += s;
+            }
+
+            fileIn.close();
+            out.print(outputStr);
+        } catch (Exception e) {
+            out.print("<pre>");
+            e.printStackTrace(response.getWriter());
+            out.print("</pre>");
+        }
+    }
+%></pre>
+</body>
+</html>
